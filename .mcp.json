@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "--yes",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://snifr:2e532917a97250082effa621bfc303c8f5ca5e40ed645192319993c160e0b19a@localhost:5432/snifrbid"
+      ],
+      "env": {}
+    },
+    "redis": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "--yes",
+        "@modelcontextprotocol/server-redis",
+        "redis://:af3f3ea3f916f65dbeaa51011fbde460b4e073ebfc420fa81de31bf3c7a42c50@localhost:6379"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "--yes",
+        "@upstash/context7-mcp"
+      ],
+      "env": {}
+    },
+    "git": {
+      "type": "stdio",
+      "command": "/home/snifr/.local/bin/uvx",
+      "args": [
+        "mcp-server-git"
+      ],
+      "env": {}
+    }
+  }
+}
