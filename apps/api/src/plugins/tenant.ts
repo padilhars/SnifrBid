@@ -19,8 +19,8 @@ export async function withTenantContext<T>(
   fn: (tx: ReturnType<typeof getDb>) => Promise<T>,
 ): Promise<T> {
   return getDb().transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL app.current_tenant_id = ${tenantId}`);
-    await tx.execute(sql`SET LOCAL app.current_user_id = ${userId}`);
+    await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`);
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     return fn(tx as unknown as ReturnType<typeof getDb>);
   });
 }
