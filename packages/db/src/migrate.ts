@@ -16,6 +16,10 @@ async function runMigrations() {
   const client = postgres(process.env.DATABASE_URL!, { max: 1 });
   const db = drizzle(client);
 
+  console.log('Ativando extensões...');
+  await client`CREATE EXTENSION IF NOT EXISTS vector`;
+  await client`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+
   console.log('Rodando migrations...');
   await migrate(db, { migrationsFolder });
   console.log('✅ Migrations aplicadas com sucesso');

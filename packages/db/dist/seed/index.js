@@ -226,6 +226,41 @@ async function seed() {
     })
         .onConflictDoNothing();
     console.log('✅ Admin inserido');
+    // 8. RLS — Row Level Security (isolamento por tenant e por usuário)
+    // IMPORTANTE: o usuário da aplicação NÃO deve ser superuser (superuser bypassa RLS)
+    const rlsTables = ['interests', 'matches', 'analyses', 'notifications', 'match_user_watchlist'];
+    for (const table of rlsTables) {
+        await client.unsafe(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+        await client.unsafe(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
+    }
+    // Policy tenant_isolation: cada tenant vê apenas seus próprios dados
+    const tenantTables = ['interests', 'matches', 'analyses', 'notifications'];
+    for (const table of tenantTables) {
+        await client.unsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies
+          WHERE tablename = '${table}' AND policyname = 'tenant_isolation'
+        ) THEN
+          CREATE POLICY tenant_isolation ON ${table}
+            USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+        END IF;
+      END $$
+    `);
+    }
+    // Policy user_isolation: watchlist é por usuário
+    await client `
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'match_user_watchlist' AND policyname = 'user_isolation'
+      ) THEN
+        CREATE POLICY user_isolation ON match_user_watchlist
+          USING (user_id = current_setting('app.current_user_id', true)::uuid);
+      END IF;
+    END $$
+  `;
+    console.log('✅ RLS habilitado nas tabelas sensíveis');
     console.log('\n✅ Seed concluído com sucesso!');
     await client.end();
 }

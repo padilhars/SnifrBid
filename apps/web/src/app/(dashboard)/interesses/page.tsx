@@ -43,7 +43,12 @@ function InteresseForm({
 
   const { data: portais } = useQuery<Portal[]>({
     queryKey: ['portais'],
-    queryFn: async () => (await api.get<Portal[]>('/admin/portais')).data,
+    queryFn: async () => (await api.get<Portal[]>('/tenants/portals')).data,
+  });
+
+  const { data: modalidades } = useQuery<Modalidade[]>({
+    queryKey: ['modalidades'],
+    queryFn: async () => (await api.get<Modalidade[]>('/tenants/modalidades')).data,
   });
 
   const { data: ufs } = useQuery<UF[]>({
@@ -198,6 +203,20 @@ function InteresseForm({
                   ))}
                 </div>
               </div>
+
+              {modalidades && modalidades.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Modalidades (deixe em branco para todas)</label>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {modalidades.map((m) => (
+                      <label key={m.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-background-tertiary cursor-pointer">
+                        <input type="checkbox" value={m.id} {...form.register('modalidadeIds')} />
+                        <span className="text-xs text-foreground">{m.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">UFs (deixe em branco para todas)</label>

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Search, Star, Bell, Settings,
-  ChevronLeft, ChevronRight, LogOut, BarChart3,
+  LayoutDashboard, FileText, Star, Bell, Settings,
+  ChevronLeft, ChevronRight, LogOut, BarChart3, ShieldCheck,
+  Users, Globe, Map, Trophy,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -15,8 +16,12 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/oportunidades', label: 'Oportunidades', icon: Search },
+  { href: '/licitacoes', label: 'Licitações', icon: FileText },
+  { href: '/participando', label: 'Participando', icon: Trophy },
   { href: '/interesses', label: 'Meus interesses', icon: Star },
+  { href: '/portais', label: 'Portais', icon: Globe },
+  { href: '/ufs', label: 'Unidades Federativas', icon: Map },
+  { href: '/usuarios', label: 'Usuários', icon: Users },
   { href: '/acompanhamento', label: 'Acompanhamento', icon: BarChart3 },
   { href: '/notificacoes', label: 'Notificações', icon: Bell, badge: true },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
@@ -91,6 +96,26 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Admin link — visível apenas para system_admin */}
+      {user?.role === 'system_admin' && (
+        <div className="px-2 pb-1 border-t border-border pt-1">
+          <Link
+            href="/admin"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm',
+              pathname.startsWith('/admin')
+                ? 'bg-danger/10 text-danger font-medium'
+                : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground',
+              !sidebarOpen && 'justify-center px-0',
+            )}
+            title={!sidebarOpen ? 'Admin' : undefined}
+          >
+            <ShieldCheck size={18} className="shrink-0" />
+            {sidebarOpen && <span>Admin</span>}
+          </Link>
+        </div>
+      )}
 
       {/* User footer */}
       <div className="p-2 border-t border-border">

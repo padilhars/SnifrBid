@@ -4,8 +4,9 @@ export declare class BanrisulAdapter extends BaseAdapter {
     readonly portalSlug = "banrisul";
     readonly portalName = "Banrisul";
     constructor();
-    fetchLicitacoes(_since: Date, _options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
-    fetchDetalhes(_externalId: string): Promise<LicitacaoColetada>;
+    fetchLicitacoes(since: Date, options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
+    fetchDetalhes(externalId: string): Promise<LicitacaoColetada>;
     healthCheck(): Promise<boolean>;
+    private mapToLicitacao;
 }
 //# sourceMappingURL=BanrisulAdapter.d.ts.map

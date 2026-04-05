@@ -4,8 +4,9 @@ export declare class BNCAdapter extends BaseAdapter {
     readonly portalSlug = "bnc";
     readonly portalName = "BNC";
     constructor();
-    fetchLicitacoes(_since: Date, _options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
-    fetchDetalhes(_externalId: string): Promise<LicitacaoColetada>;
+    fetchLicitacoes(since: Date, options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
+    fetchDetalhes(externalId: string): Promise<LicitacaoColetada>;
     healthCheck(): Promise<boolean>;
+    private mapToLicitacao;
 }
 //# sourceMappingURL=BNCAdapter.d.ts.map

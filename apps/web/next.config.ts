@@ -6,11 +6,13 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
   },
   async rewrites() {
+    // Proxy /api/* para o backend Fastify — apenas em desenvolvimento
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return [];
     return [
       {
-        // Proxy /api/* para o backend Fastify (dev only)
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+        destination: `${apiUrl}/:path*`,
       },
     ];
   },

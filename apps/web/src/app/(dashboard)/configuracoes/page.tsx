@@ -56,6 +56,179 @@ const ROLE_LABELS: Record<string, string> = {
   member: 'Membro',
 };
 
+function PlanTab({
+  plan,
+  isLoading,
+  useOwnAI,
+  analysesUsed,
+  usedUsers,
+  onConfigureAI,
+}: {
+  plan: Plan | null;
+  isLoading: boolean;
+  useOwnAI: boolean;
+  analysesUsed: number;
+  usedUsers: number;
+  onConfigureAI: () => void;
+}) {
+  const qc = useQueryClient();
+  const { user } = useAuthStore();
+  const [changingPlan, setChangingPlan] = useState(false);
+
+  const { data: availablePlans = [] } = useQuery<Plan[]>({
+    queryKey: ['available-plans'],
+    queryFn: async () => (await api.get('/tenants/plans')).data,
+    enabled: changingPlan,
+  });
+
+  const changePlanMutation = useMutation({
+    mutationFn: (planId: string) => api.post('/tenants/change-plan', { planId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tenant-details'] });
+      toast.success('Plano alterado com sucesso');
+      setChangingPlan(false);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+      toast.error(msg ?? 'Erro ao alterar plano');
+    },
+  });
+
+  const canChangePlan = ['owner', 'system_admin'].includes(user?.role ?? '');
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return <div className="text-center py-8 text-foreground-muted text-sm">Nenhum plano ativo</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Card do plano atual */}
+      <div className="bg-background-secondary border border-primary/30 rounded-xl p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-xs text-foreground-muted">Plano atual</p>
+            <p className="text-xl font-bold text-foreground">{plan.name}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-foreground">
+              {formatCurrency(useOwnAI ? plan.priceWithOwnAiBrl : plan.priceWithPlatformAiBrl)}
+              <span className="text-sm font-normal text-foreground-muted">/mês</span>
+            </p>
+            <p className="text-xs text-foreground-muted">{useOwnAI ? 'sem IA do sistema' : 'inclui IA do sistema'}</p>
+          </div>
+        </div>
+
+        {!useOwnAI && (
+          <div className="flex items-center gap-2 p-2 bg-success/10 border border-success/30 rounded-lg text-xs text-success mb-4">
+            <TrendingUp size={13} />
+            Economize {formatCurrency(parseFloat(plan.priceWithPlatformAiBrl) - parseFloat(plan.priceWithOwnAiBrl))}/mês configurando sua própria IA →
+            <button onClick={onConfigureAI} className="underline">Configurar</button>
+          </div>
+        )}
+
+        {/* Barras de uso */}
+        <div className="space-y-3">
+          {[
+            { label: 'Análises este mês', used: analysesUsed, max: plan.maxAnalysesPerMonth },
+            { label: 'Usuários ativos', used: usedUsers, max: plan.maxUsers },
+          ].map(({ label, used, max }) => (
+            <div key={label}>
+              <div className="flex justify-between text-xs text-foreground-muted mb-1">
+                <span>{label}</span>
+                <span><strong className="text-foreground">{used}</strong> / {max === -1 ? '∞' : max}</span>
+              </div>
+              {max !== -1 && (
+                <div className="h-1.5 rounded-full bg-background-tertiary overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${used / max >= 1 ? 'bg-danger' : used / max >= 0.8 ? 'bg-warning' : 'bg-primary'}`}
+                    style={{ width: `${Math.min(100, (used / max) * 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Features do plano */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Interesses', value: plan.maxInterests },
+          { label: 'Portais', value: plan.maxPortals },
+          { label: 'Análises/mês', value: plan.maxAnalysesPerMonth },
+          { label: 'Usuários', value: plan.maxUsers },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-background-secondary border border-border rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{value === -1 ? '∞' : value}</p>
+            <p className="text-xs text-foreground-muted">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Alterar plano */}
+      {canChangePlan && (
+        <div className="bg-background-secondary border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Alterar plano</p>
+              <p className="text-xs text-foreground-muted mt-0.5">Faça upgrade ou downgrade do plano da empresa</p>
+            </div>
+            <button
+              onClick={() => setChangingPlan(!changingPlan)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border text-foreground-muted hover:text-foreground transition-colors"
+            >
+              {changingPlan ? 'Cancelar' : 'Alterar'}
+            </button>
+          </div>
+
+          {changingPlan && (
+            <div className="mt-4 space-y-2">
+              {availablePlans.map((p) => (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${p.id === plan.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{p.name}</p>
+                    <p className="text-xs text-foreground-muted">
+                      {formatCurrency(useOwnAI ? p.priceWithOwnAiBrl : p.priceWithPlatformAiBrl)}/mês ·
+                      {p.maxInterests === -1 ? ' ∞' : ` ${p.maxInterests}`} interesses ·
+                      {p.maxUsers === -1 ? ' ∞' : ` ${p.maxUsers}`} usuários
+                    </p>
+                  </div>
+                  {p.id === plan.id ? (
+                    <span className="text-xs text-primary font-medium">Atual</span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Alterar para o plano ${p.name}?`)) changePlanMutation.mutate(p.id);
+                      }}
+                      disabled={changePlanMutation.isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {changePlanMutation.isPending && <Loader2 size={11} className="animate-spin" />}
+                      Selecionar
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ConfiguracoesPage() {
   const qc = useQueryClient();
   const { tenant, user } = useAuthStore();
@@ -416,79 +589,14 @@ export default function ConfiguracoesPage() {
 
         {/* Tab: Plano */}
         {activeTab === 'plano' && (
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            ) : plan ? (
-              <>
-                {/* Card do plano atual */}
-                <div className="bg-background-secondary border border-primary/30 rounded-xl p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-xs text-foreground-muted">Plano atual</p>
-                      <p className="text-xl font-bold text-foreground">{plan.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatCurrency(useOwnAI ? plan.priceWithOwnAiBrl : plan.priceWithPlatformAiBrl)}
-                        <span className="text-sm font-normal text-foreground-muted">/mês</span>
-                      </p>
-                      <p className="text-xs text-foreground-muted">{useOwnAI ? 'sem IA do sistema' : 'inclui IA do sistema'}</p>
-                    </div>
-                  </div>
-
-                  {!useOwnAI && (
-                    <div className="flex items-center gap-2 p-2 bg-success/10 border border-success/30 rounded-lg text-xs text-success mb-4">
-                      <TrendingUp size={13} />
-                      Economize {formatCurrency(parseFloat(plan.priceWithPlatformAiBrl) - parseFloat(plan.priceWithOwnAiBrl))}/mês configurando sua própria IA →
-                      <button onClick={() => setActiveTab('ia')} className="underline">Configurar</button>
-                    </div>
-                  )}
-
-                  {/* Barras de uso */}
-                  <div className="space-y-3">
-                    {[
-                      { label: 'Análises este mês', used: analysesUsed, max: plan.maxAnalysesPerMonth },
-                      { label: 'Usuários ativos', used: usedUsers, max: plan.maxUsers },
-                    ].map(({ label, used, max }) => (
-                      <div key={label}>
-                        <div className="flex justify-between text-xs text-foreground-muted mb-1">
-                          <span>{label}</span>
-                          <span><strong className="text-foreground">{used}</strong> / {max}</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-background-tertiary overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${used / max >= 1 ? 'bg-danger' : used / max >= 0.8 ? 'bg-warning' : 'bg-primary'}`}
-                            style={{ width: `${Math.min(100, (used / max) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Features do plano */}
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'Interesses', value: plan.maxInterests },
-                    { label: 'Portais', value: plan.maxPortals },
-                    { label: 'Análises/mês', value: plan.maxAnalysesPerMonth },
-                    { label: 'Usuários', value: plan.maxUsers },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-background-secondary border border-border rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-foreground">{value === -1 ? '∞' : value}</p>
-                      <p className="text-xs text-foreground-muted">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8 text-foreground-muted text-sm">Nenhum plano ativo</div>
-            )}
-          </div>
+          <PlanTab
+            plan={plan ?? null}
+            isLoading={isLoading}
+            useOwnAI={useOwnAI}
+            analysesUsed={analysesUsed}
+            usedUsers={usedUsers}
+            onConfigureAI={() => setActiveTab('ia')}
+          />
         )}
       </div>
 

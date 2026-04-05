@@ -61,7 +61,7 @@ export default function RegisterPage() {
     if (!step1Data) return;
     setServerError(null);
     try {
-      const res = await api.post<{ accessToken: string; user: User; tenant: Tenant }>('/auth/register', {
+      const res = await api.post<{ accessToken: string; refreshToken: string; user: User; tenant: Tenant }>('/auth/register', {
         companyName: step1Data.companyName,
         cnpj: step1Data.cnpj,
         planSlug: step1Data.planSlug,
@@ -69,7 +69,8 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
       });
-      setAuth(res.data.user, res.data.tenant, res.data.accessToken);
+      document.cookie = `snifrbid_session=1; path=/; max-age=${60 * 60 * 24 * 7}; Secure; SameSite=Lax`;
+      setAuth(res.data.user, res.data.tenant, res.data.accessToken, res.data.refreshToken);
       router.push('/dashboard');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error;

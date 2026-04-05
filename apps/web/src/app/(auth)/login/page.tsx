@@ -38,8 +38,12 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setServerError(null);
     try {
-      const res = await api.post<{ accessToken: string; user: User; tenant: Tenant }>('/auth/login', data);
-      setAuth(res.data.user, res.data.tenant, res.data.accessToken);
+      const res = await api.post<{ accessToken: string; refreshToken: string; user: User & { tenant: Tenant } }>('/auth/login', data);
+      const { user, accessToken, refreshToken } = res.data;
+      const tenant = user.tenant;
+      // Seta cookie de sessão para o middleware reconhecer a autenticação
+      document.cookie = `snifrbid_session=1; path=/; max-age=${60 * 60 * 24 * 7}; Secure; SameSite=Lax`;
+      setAuth(user, tenant, accessToken, refreshToken);
       router.push('/dashboard');
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } }).response?.status;

@@ -4,8 +4,9 @@ export declare class ComprasRSAdapter extends BaseAdapter {
     readonly portalSlug = "compras-rs";
     readonly portalName = "ComprasRS";
     constructor();
-    fetchLicitacoes(_since: Date, _options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
-    fetchDetalhes(_externalId: string): Promise<LicitacaoColetada>;
+    fetchLicitacoes(since: Date, options: FetchLicitacoesOptions): AsyncGenerator<LicitacaoColetada>;
+    fetchDetalhes(externalId: string): Promise<LicitacaoColetada>;
     healthCheck(): Promise<boolean>;
+    private mapToLicitacao;
 }
 //# sourceMappingURL=ComprasRSAdapter.d.ts.map

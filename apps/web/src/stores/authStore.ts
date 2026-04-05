@@ -1,23 +1,38 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { User, Tenant } from '@/types';
 
 interface AuthState {
   user: User | null;
   tenant: Tenant | null;
   accessToken: string | null;
-  setAuth: (user: User, tenant: Tenant, token: string) => void;
+  refreshToken: string | null;
+  setAuth: (user: User, tenant: Tenant, accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
-  updateToken: (token: string) => void;
+  updateToken: (accessToken: string, refreshToken?: string) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  tenant: null,
-  accessToken: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      tenant: null,
+      accessToken: null,
+      refreshToken: null,
 
-  setAuth: (user, tenant, token) => set({ user, tenant, accessToken: token }),
+      setAuth: (user, tenant, accessToken, refreshToken) =>
+        set({ user, tenant, accessToken, refreshToken }),
 
-  clearAuth: () => set({ user: null, tenant: null, accessToken: null }),
+      clearAuth: () => {
+        if (typeof document !== 'undefined') {
+          document.cookie = 'snifrbid_session=; path=/; max-age=0; Secure; SameSite=Lax';
+        }
+        set({ user: null, tenant: null, accessToken: null, refreshToken: null });
+      },
 
-  updateToken: (token) => set({ accessToken: token }),
-}));
+      updateToken: (accessToken, refreshToken) =>
+        set((s) => ({ accessToken, refreshToken: refreshToken ?? s.refreshToken })),
+    }),
+    { name: 'snifrbid_auth' },
+  ),
+);

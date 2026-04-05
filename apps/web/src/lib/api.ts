@@ -32,12 +32,15 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        const { data } = await axios.post<{ accessToken: string }>(
+        const refreshToken = getAuthStore().getState().refreshToken;
+        if (!refreshToken) throw new Error('no refresh token');
+        const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
           `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/auth/refresh`,
-          {},
-          { withCredentials: true },
+          { refreshToken },
         );
-        getAuthStore().getState().updateToken(data.accessToken);
+        getAuthStore().getState().updateToken(data.accessToken, data.refreshToken);
+        original.headers = original.headers ?? {};
+        original.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(original);
       } catch {
         getAuthStore().getState().clearAuth();
