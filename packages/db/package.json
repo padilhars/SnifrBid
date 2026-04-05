@@ -1,0 +1,35 @@
+{
+  "name": "@snifrbid/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx/esm src/migrate.ts",
+    "db:seed": "node --import tsx/esm src/seed/index.ts"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,4 @@
+
+> @snifrbid/db@0.1.0 typecheck /home/snifr/app/packages/db
+> tsc --noEmit
+

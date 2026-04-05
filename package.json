@@ -1,0 +1,21 @@
+{
+  "name": "snifrbid",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "api:dev": "turbo run dev --filter=@snifrbid/api",
+    "workers:dev": "turbo run dev --filter=@snifrbid/workers",
+    "web:dev": "turbo run dev --filter=@snifrbid/web",
+    "db:migrate": "turbo run db:migrate --filter=@snifrbid/db",
+    "db:seed": "turbo run db:seed --filter=@snifrbid/db",
+    "db:generate": "turbo run db:generate --filter=@snifrbid/db",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}

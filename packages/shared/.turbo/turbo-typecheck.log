@@ -1,0 +1,4 @@
+
+> @snifrbid/shared@0.1.0 typecheck /home/snifr/app/packages/shared
+> tsc --noEmit
+

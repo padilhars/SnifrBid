@@ -1,0 +1,4 @@
+
+> @snifrbid/portals@0.1.0 typecheck /home/snifr/app/packages/portals
+> tsc --noEmit
+
