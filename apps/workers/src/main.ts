@@ -5,6 +5,7 @@ import { createAnalysisWorker } from './workers/AnalysisWorker.js';
 import { createNotificationWorker } from './workers/NotificationWorker.js';
 import { createMonitoringWorker, createMaintenanceWorker } from './workers/MonitoringWorker.js';
 import { createEmbeddingWorker } from './workers/EmbeddingWorker.js';
+import { startTelegramBot, stopTelegramBot } from './services/TelegramBotService.js';
 import { registerScheduledJobs } from './schedulers/index.js';
 
 async function main() {
@@ -22,6 +23,9 @@ async function main() {
 
   await registerScheduledJobs();
 
+  // Inicia bot Telegram (opcional — só se token configurado)
+  startTelegramBot();
+
   for (const worker of workers) {
     worker.on('completed', (job) => {
       console.log(`[${worker.name}] Job ${job.id} completed`);
@@ -37,6 +41,7 @@ async function main() {
   // Graceful shutdown
   async function shutdown() {
     console.log('Shutting down workers...');
+    stopTelegramBot();
     await Promise.all(workers.map((w) => w.close()));
     process.exit(0);
   }

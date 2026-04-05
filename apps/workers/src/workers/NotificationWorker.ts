@@ -1,7 +1,7 @@
 import { Worker, type Job } from 'bullmq';
 import { getDb, schema } from '@snifrbid/db';
 import { getRedis } from '@snifrbid/shared';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import nodemailer from 'nodemailer';
 import TelegramBot from 'node-telegram-bot-api';
 import webpush from 'web-push';
@@ -51,103 +51,123 @@ async function sendTelegram(chatId: string, text: string) {
   await bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
 }
 
-async function sendWebPush(subscription: object, payload: string) {
+async function sendWebPushNotification(subscription: object, payload: string) {
   try {
     await webpush.sendNotification(subscription as Parameters<typeof webpush.sendNotification>[0], payload);
   } catch {
-    // subscription may be expired — ignore
+    // subscription expirada — ignora silenciosamente
   }
 }
 
-async function buildNotificationContent(data: NotificationJobData): Promise<{ title: string; body: string }> {
+async function buildNotificationContent(data: NotificationJobData): Promise<{ title: string; body: string; html: string }> {
   if (data.type === 'analysis_complete' && data.matchId) {
     const match = await getDb().query.matches.findFirst({
       where: eq(schema.matches.id, data.matchId),
       with: { licitacao: true, interest: true },
     });
-    if (!match) return { title: 'Análise concluída', body: 'Uma nova análise foi concluída.' };
+    if (!match) return buildDefaultContent();
 
-    return {
-      title: `Análise concluída: ${match.interest.name}`,
-      body: `A licitação "${match.licitacao.objeto.slice(0, 150)}..." foi analisada com sucesso.`,
-    };
+    const title = `Análise concluída: ${match.interest.name}`;
+    const body = `A licitação "${match.licitacao.objeto.slice(0, 150)}..." foi analisada.`;
+    const html = `
+      <h2>Análise de Licitação Concluída</h2>
+      <p><strong>Interesse:</strong> ${match.interest.name}</p>
+      <p><strong>Objeto:</strong> ${match.licitacao.objeto}</p>
+      <p>Acesse o app para ver a análise completa.</p>
+    `;
+    return { title, body, html };
+  }
+
+  if (data.type === 'new_match' && data.matchId) {
+    const match = await getDb().query.matches.findFirst({
+      where: eq(schema.matches.id, data.matchId),
+      with: { licitacao: true, interest: true },
+    });
+    if (!match) return buildDefaultContent();
+
+    const title = `Nova licitação encontrada: ${match.interest.name}`;
+    const body = `${match.licitacao.objeto.slice(0, 150)}...`;
+    const html = `
+      <h2>Nova Licitação Encontrada</h2>
+      <p><strong>Interesse:</strong> ${match.interest.name}</p>
+      <p><strong>Objeto:</strong> ${match.licitacao.objeto}</p>
+      <p><strong>Score:</strong> ${((match.scoreFinal ?? 0) * 100).toFixed(0)}%</p>
+    `;
+    return { title, body, html };
   }
 
   if (data.type === 'status_change' && data.licitacaoId) {
     const lic = await getDb().query.licitacoes.findFirst({
       where: eq(schema.licitacoes.id, data.licitacaoId),
     });
-    return {
-      title: 'Mudança detectada em licitação',
-      body: `A licitação "${lic?.objeto.slice(0, 100) ?? data.licitacaoId}" teve alterações detectadas.`,
-    };
+    const title = 'Mudança detectada em licitação';
+    const body = `A licitação "${lic?.objeto.slice(0, 100) ?? data.licitacaoId}" teve alterações.`;
+    const html = `<h2>Mudança em Licitação</h2><p>${body}</p>`;
+    return { title, body, html };
   }
 
-  return { title: 'Notificação SnifrBid', body: 'Você tem uma atualização.' };
+  return buildDefaultContent();
+}
+
+function buildDefaultContent() {
+  return {
+    title: 'Notificação SnifrBid',
+    body: 'Você tem uma atualização.',
+    html: '<p>Você tem uma atualização no SnifrBid.</p>',
+  };
+}
+
+function shouldNotifyUser(
+  prefs: typeof schema.notificationPreferences.$inferSelect,
+  type: NotificationJobData['type'],
+): boolean {
+  switch (type) {
+    case 'analysis_complete': return prefs.notifyAnalysisComplete;
+    case 'status_change': return prefs.notifyStatusChange;
+    case 'new_match': return prefs.notifyNewMatch;
+    case 'deadline_alert': return prefs.notifyDeadlineAlert;
+    default: return false;
+  }
 }
 
 async function processNotificationJob(job: Job<NotificationJobData>) {
-  const data = job.data;
+  const { type, matchId, tenantId, licitacaoId } = job.data;
 
-  const users = await getDb().query.users.findMany({
-    where: eq(schema.users.tenantId, data.tenantId),
+  // Buscar usuários ativos do tenant
+  const usersDoTenant = await getDb()
+    .select({ userId: schema.users.id, email: schema.users.email })
+    .from(schema.users)
+    .where(and(
+      eq(schema.users.tenantId, tenantId),
+      eq(schema.users.isActive, true),
+    ));
+
+  const userIds = usersDoTenant.map((u) => u.userId);
+  if (userIds.length === 0) return;
+
+  // Buscar preferências de todos os usuários de uma vez
+  const prefs = await getDb().query.notificationPreferences.findMany({
+    where: inArray(schema.notificationPreferences.userId, userIds),
   });
 
-  const { title, body } = await buildNotificationContent(data);
+  const emailByUserId = new Map(usersDoTenant.map((u) => [u.userId, u.email]));
 
-  for (const user of users) {
-    const prefs = await getDb().query.notificationPreferences.findFirst({
-      where: eq(schema.notificationPreferences.userId, user.id),
-    });
-    if (!prefs) continue;
+  const { title, body, html } = await buildNotificationContent(job.data);
 
-    const shouldNotify =
-      (data.type === 'analysis_complete' && prefs.notifyAnalysisComplete) ||
-      (data.type === 'status_change' && prefs.notifyStatusChange) ||
-      (data.type === 'new_match' && prefs.notifyNewMatch) ||
-      (data.type === 'deadline_alert' && prefs.notifyDeadlineAlert);
+  for (const pref of prefs) {
+    if (!shouldNotifyUser(pref, type)) continue;
 
-    if (!shouldNotify) continue;
-
-    // Email
-    if (prefs.emailEnabled) {
-      try {
-        await sendEmail(user.email, title, `<p>${body}</p>`);
-        await getDb().insert(schema.notifications).values({
-          tenantId: data.tenantId,
-          userId: user.id,
-          matchId: data.matchId ?? null,
-          type: data.type,
-          channel: 'email',
-          title,
-          body,
-          status: 'sent',
-          sentAt: new Date(),
-        });
-      } catch (err) {
-        await getDb().insert(schema.notifications).values({
-          tenantId: data.tenantId,
-          userId: user.id,
-          matchId: data.matchId ?? null,
-          type: data.type,
-          channel: 'email',
-          title,
-          body,
-          status: 'failed',
-          errorMessage: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
+    const userEmail = emailByUserId.get(pref.userId)!;
 
     // Telegram
-    if (prefs.telegramEnabled && prefs.telegramChatId) {
+    if (pref.telegramEnabled && pref.telegramChatId) {
       try {
-        await sendTelegram(prefs.telegramChatId, `<b>${title}</b>\n${body}`);
+        await sendTelegram(pref.telegramChatId, `<b>${title}</b>\n${body}`);
         await getDb().insert(schema.notifications).values({
-          tenantId: data.tenantId,
-          userId: user.id,
-          matchId: data.matchId ?? null,
-          type: data.type,
+          tenantId,
+          userId: pref.userId,
+          matchId: matchId ?? null,
+          type,
           channel: 'telegram',
           title,
           body,
@@ -156,10 +176,10 @@ async function processNotificationJob(job: Job<NotificationJobData>) {
         });
       } catch (err) {
         await getDb().insert(schema.notifications).values({
-          tenantId: data.tenantId,
-          userId: user.id,
-          matchId: data.matchId ?? null,
-          type: data.type,
+          tenantId,
+          userId: pref.userId,
+          matchId: matchId ?? null,
+          type,
           channel: 'telegram',
           title,
           body,
@@ -169,10 +189,40 @@ async function processNotificationJob(job: Job<NotificationJobData>) {
       }
     }
 
-    // Web Push
-    if (prefs.webpushEnabled && prefs.webpushSubscription) {
+    // Email (falha independente do Telegram)
+    if (pref.emailEnabled) {
+      try {
+        await sendEmail(userEmail, title, html);
+        await getDb().insert(schema.notifications).values({
+          tenantId,
+          userId: pref.userId,
+          matchId: matchId ?? null,
+          type,
+          channel: 'email',
+          title,
+          body,
+          status: 'sent',
+          sentAt: new Date(),
+        });
+      } catch (err) {
+        await getDb().insert(schema.notifications).values({
+          tenantId,
+          userId: pref.userId,
+          matchId: matchId ?? null,
+          type,
+          channel: 'email',
+          title,
+          body,
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    // Web Push (falha independente dos outros)
+    if (pref.webpushEnabled && pref.webpushSubscription) {
       const payload = JSON.stringify({ title, body });
-      await sendWebPush(prefs.webpushSubscription as object, payload);
+      await sendWebPushNotification(pref.webpushSubscription as object, payload);
     }
   }
 }
