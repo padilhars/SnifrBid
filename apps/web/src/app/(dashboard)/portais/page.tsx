@@ -29,8 +29,8 @@ export default function PortaisPage() {
   const { tenant } = useAuthStore();
 
   const { data: allPortals, isLoading: loadingAll } = useQuery<Portal[]>({
-    queryKey: ['all-portals'],
-    queryFn: async () => (await api.get('/admin/portals')).data,
+    queryKey: ['available-portals'],
+    queryFn: async () => (await api.get('/tenants/available-portals')).data,
   });
 
   const { data: activated, isLoading: loadingActivated } = useQuery<TenantPortal[]>({
@@ -39,7 +39,7 @@ export default function PortaisPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (portalId: string) => api.post(`/tenants/portals/${portalId}/toggle`),
+    mutationFn: (portalId: string) => api.post(`/tenants/portals/${portalId}/toggle`, {}),
     onSuccess: (res, portalId) => {
       qc.invalidateQueries({ queryKey: ['activated-portals'] });
       const isNowActive = (res.data as { active: boolean }).active;

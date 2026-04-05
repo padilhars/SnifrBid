@@ -33,7 +33,7 @@ export default function UFsPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (code: string) => api.post(`/tenants/ufs/${code}/toggle`),
+    mutationFn: (code: string) => api.post(`/tenants/ufs/${code}/toggle`, {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['activated-ufs'] });
     },
@@ -50,13 +50,13 @@ export default function UFsPage() {
     if (activate) {
       for (const uf of ufs) {
         if (!activatedCodes.has(uf.code)) {
-          await api.post(`/tenants/ufs/${uf.code}/toggle`);
+          await api.post(`/tenants/ufs/${uf.code}/toggle`, {});
         }
       }
     } else {
       for (const uf of ufs) {
         if (activatedCodes.has(uf.code)) {
-          await api.post(`/tenants/ufs/${uf.code}/toggle`);
+          await api.post(`/tenants/ufs/${uf.code}/toggle`, {});
         }
       }
     }

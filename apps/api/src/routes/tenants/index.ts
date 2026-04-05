@@ -106,10 +106,22 @@ export default async function tenantRoutes(app: FastifyInstance) {
     });
   });
 
+  // GET /tenants/available-portals — todos os portais ativos globais (para página de ativação)
+  app.get('/available-portals', { onRequest: [app.authenticate] }, async () => {
+    return getDb().query.portals.findMany({
+      where: eq(schema.portals.isActive, true),
+      with: { modalidades: { where: eq(schema.modalidades.isActive, true) } },
+      orderBy: (p, { asc }) => [asc(p.name)],
+    });
+  });
+
   // POST /tenants/portals/:id/toggle — ativar/desativar portal para o tenant
   app.post('/portals/:id/toggle', {
     onRequest: [app.authenticate],
-    schema: { params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+    schema: {
+      params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+      body: { type: 'object', additionalProperties: true },
+    },
   }, async (req, reply) => {
     if (!['owner', 'admin', 'system_admin'].includes(req.currentUser.role)) {
       return reply.code(403).send({ error: 'Sem permissão' });
@@ -177,7 +189,10 @@ export default async function tenantRoutes(app: FastifyInstance) {
   // POST /tenants/ufs/:code/toggle
   app.post('/ufs/:code/toggle', {
     onRequest: [app.authenticate],
-    schema: { params: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] } },
+    schema: {
+      params: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] },
+      body: { type: 'object', additionalProperties: true },
+    },
   }, async (req, reply) => {
     if (!['owner', 'admin', 'system_admin'].includes(req.currentUser.role)) {
       return reply.code(403).send({ error: 'Sem permissão' });
