@@ -5,7 +5,7 @@ import { getRedis } from '@snifrbid/shared';
 import { eq, and, sql } from 'drizzle-orm';
 import { getAdapter } from '@snifrbid/portals';
 import { buildCollectionFilters } from '../services/CollectionFilterService.js';
-import { matchingQueue, monitoringQueue } from '../queues/index.js';
+import { matchingQueue, monitoringQueue, embeddingQueue } from '../queues/index.js';
 
 function sha256(data: string): string {
   return createHash('sha256').update(data).digest('hex');
@@ -89,6 +89,8 @@ async function processCollectionJob(job: Job) {
       const isNew = saved.collectedAt.getTime() === saved.updatedAt.getTime();
       if (isNew) {
         await matchingQueue.add('match', { licitacaoId: saved.id });
+        // Embedding assíncrono — não bloqueia a coleta
+        await embeddingQueue.add('embed', { licitacaoId: saved.id });
       } else {
         await monitoringQueue.add('diff', { licitacaoId: saved.id });
       }

@@ -22,3 +22,6 @@ export const monitoringQueue = new Queue('monitoring', { connection });
 
 // maintenanceQueue exportada aqui para ser acessível no scheduler e no Bull Board da API
 export const maintenanceQueue = new Queue('maintenance', { connection });
+
+// Geração de embeddings — job assíncrono separado para não bloquear a coleta
+export const embeddingQueue = new Queue('embedding', { connection });

@@ -4,6 +4,7 @@ import { createMatchingWorker } from './workers/MatchingWorker.js';
 import { createAnalysisWorker } from './workers/AnalysisWorker.js';
 import { createNotificationWorker } from './workers/NotificationWorker.js';
 import { createMonitoringWorker, createMaintenanceWorker } from './workers/MonitoringWorker.js';
+import { createEmbeddingWorker } from './workers/EmbeddingWorker.js';
 import { registerScheduledJobs } from './schedulers/index.js';
 
 async function main() {
@@ -16,6 +17,7 @@ async function main() {
     createNotificationWorker(),
     createMonitoringWorker(),
     createMaintenanceWorker(),
+    createEmbeddingWorker(),
   ];
 
   await registerScheduledJobs();

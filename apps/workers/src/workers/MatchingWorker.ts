@@ -3,6 +3,7 @@ import { getDb, schema } from '@snifrbid/db';
 import { getRedis } from '@snifrbid/shared';
 import { eq, sql } from 'drizzle-orm';
 import { aiProviderService } from '../services/AIProviderService.js';
+import { getSemanticScore, calcularScoreRelevancia } from '../services/EmbeddingService.js';
 import { analysisQueue } from '../queues/index.js';
 
 interface KeywordContext {
@@ -66,8 +67,8 @@ Resposta:`;
 }
 
 function calcularScoreFinal(maxKeywordScore: number, matchedCount: number, totalKeywords: number): number {
-  const keywordCoverage = totalKeywords > 0 ? matchedCount / totalKeywords : 0;
-  return Math.min(1, maxKeywordScore * 0.6 + keywordCoverage * 0.4);
+  const coverageRatio = matchedCount / Math.max(totalKeywords, 1);
+  return maxKeywordScore * 0.6 + coverageRatio * 0.4;
 }
 
 async function processMatchingJob(job: Job<{ licitacaoId: string }>) {
@@ -129,6 +130,11 @@ async function processMatchingJob(job: Job<{ licitacaoId: string }>) {
 
     if (matchedKeywords.length === 0) continue;
 
+    // Score semântico: compara embedding da licitação com embedding da primeira keyword
+    // O embedding da licitação é gerado pelo EmbeddingWorker de forma assíncrona
+    const scoreSemantico = await getSemanticScore(licitacaoId, []);
+    const maxFtsAndTrgm = maxKeywordScore;
+    const scoreTextual = calcularScoreRelevancia(maxFtsAndTrgm, 0, scoreSemantico);
     const scoreFinal = calcularScoreFinal(maxKeywordScore, matchedKeywords.length, keywordContexts.length);
 
     const [match] = await getDb().insert(schema.matches)
@@ -136,6 +142,8 @@ async function processMatchingJob(job: Job<{ licitacaoId: string }>) {
         licitacaoId,
         interestId: interesse.id,
         tenantId: interesse.tenantId,
+        scoreTextual,
+        scoreSemantico,
         scoreFinal,
         matchedKeywords,
         status: 'pending',

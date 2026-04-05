@@ -17,6 +17,7 @@ export const bullBoardPlugin = fp(async (app: FastifyInstance) => {
     new Queue('notification', { connection }),
     new Queue('monitoring', { connection }),
     new Queue('maintenance', { connection }),
+    new Queue('embedding', { connection }),
   ];
 
   const serverAdapter = new FastifyAdapter();
