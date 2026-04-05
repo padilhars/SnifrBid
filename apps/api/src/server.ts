@@ -4,6 +4,7 @@ import { corsPlugin } from './plugins/cors.js';
 import { rateLimitPlugin } from './plugins/rate-limit.js';
 import { authPlugin } from './plugins/auth.js';
 import { tenantPlugin } from './plugins/tenant.js';
+import { bullBoardPlugin } from './plugins/bull-board.js';
 
 export async function buildServer() {
   const app = Fastify({
@@ -31,6 +32,7 @@ export async function buildServer() {
   await app.register(rateLimitPlugin);
   await app.register(authPlugin);
   await app.register(tenantPlugin);
+  await app.register(bullBoardPlugin);
 
   // Rotas
   await app.register(import('./routes/auth/index.js'), { prefix: '/auth' });

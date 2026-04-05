@@ -1,0 +1,32 @@
+{
+  "name": "@snifrbid/workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@snifrbid/db": "workspace:*",
+    "@snifrbid/shared": "workspace:*",
+    "@snifrbid/portals": "workspace:*",
+    "@snifrbid/portal-core": "workspace:*",
+    "bullmq": "^5.72.0",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.45.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "nodemailer": "^7.0.3",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/node-telegram-bot-api": "^0.64.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/web-push": "^3.6.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.0.0"
+  }
+}
