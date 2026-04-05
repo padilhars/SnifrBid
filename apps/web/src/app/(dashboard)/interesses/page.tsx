@@ -251,7 +251,7 @@ function InteresseForm({
 
 export default function InteressesPage() {
   const qc = useQueryClient();
-  const { tenant } = useAuthStore();
+  const { tenant, user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [editingInteresse, setEditingInteresse] = useState<Interest | null>(null);
 
@@ -275,7 +275,8 @@ export default function InteressesPage() {
     onError: () => toast.error('Erro ao excluir'),
   });
 
-  const planLimit = tenant?.plan?.maxInterests ?? -1;
+  const isAdmin = user?.role === 'system_admin';
+  const planLimit = isAdmin ? -1 : (tenant?.plan?.maxInterests ?? -1);
   const atLimit = planLimit !== -1 && (interesses?.length ?? 0) >= planLimit;
 
   return (

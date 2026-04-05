@@ -188,8 +188,9 @@ export default function UsuariosPage() {
     onError: () => toast.error('Erro ao reativar usuário'),
   });
 
+  const isAdmin = currentUser?.role === 'system_admin';
   const canManage = ['owner', 'admin', 'system_admin'].includes(currentUser?.role ?? '');
-  const maxUsers = tenant?.plan?.maxUsers ?? 1;
+  const maxUsers = isAdmin ? -1 : (tenant?.plan?.maxUsers ?? 1);
   const activeCount = users?.filter((u) => u.isActive).length ?? 0;
   const atLimit = maxUsers !== -1 && activeCount >= maxUsers;
 

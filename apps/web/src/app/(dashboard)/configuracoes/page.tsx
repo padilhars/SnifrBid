@@ -72,7 +72,7 @@ function PlanTab({
   onConfigureAI: () => void;
 }) {
   const qc = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, updateTenant } = useAuthStore();
   const [changingPlan, setChangingPlan] = useState(false);
 
   const { data: availablePlans = [] } = useQuery<Plan[]>({
@@ -83,8 +83,11 @@ function PlanTab({
 
   const changePlanMutation = useMutation({
     mutationFn: (planId: string) => api.post('/tenants/change-plan', { planId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['tenant-details'] });
+      // Atualiza o tenant no store para refletir os novos limites imediatamente
+      const res = await api.get<Tenant>('/tenants/me');
+      updateTenant(res.data);
       toast.success('Plano alterado com sucesso');
       setChangingPlan(false);
     },

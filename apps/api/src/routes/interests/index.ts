@@ -47,28 +47,29 @@ export default async function interestRoutes(app: FastifyInstance) {
     };
     const db = getDb();
 
-    // Verificar limite do plano
-    const tenant = await db.query.tenants.findFirst({
-      where: eq(schema.tenants.id, req.currentUser.tenantId),
-      with: { plan: true },
-    });
-    if (!tenant) return reply.code(404).send({ error: 'Tenant não encontrado' });
-
-    const [{ count: interestCount }] = await db.select({ count: count() })
-      .from(schema.interests)
-      .where(eq(schema.interests.tenantId, req.currentUser.tenantId));
-
-    if (tenant.plan.maxInterests !== -1 && Number(interestCount) >= tenant.plan.maxInterests) {
-      return reply.code(403).send({
-        error: `Seu plano permite no máximo ${tenant.plan.maxInterests} interesse(s). Faça upgrade para adicionar mais.`,
+    // Verificar limite do plano (system_admin tem bypass total)
+    if (req.currentUser.role !== 'system_admin') {
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(schema.tenants.id, req.currentUser.tenantId),
+        with: { plan: true },
       });
-    }
+      if (!tenant) return reply.code(404).send({ error: 'Tenant não encontrado' });
 
-    // Verificar limite de portais
-    if (tenant.plan.maxPortals !== -1 && portalIds.length > tenant.plan.maxPortals) {
-      return reply.code(403).send({
-        error: `Seu plano permite no máximo ${tenant.plan.maxPortals} portal(is) por interesse.`,
-      });
+      const [{ count: interestCount }] = await db.select({ count: count() })
+        .from(schema.interests)
+        .where(eq(schema.interests.tenantId, req.currentUser.tenantId));
+
+      if (tenant.plan.maxInterests !== -1 && Number(interestCount) >= tenant.plan.maxInterests) {
+        return reply.code(403).send({
+          error: `Seu plano permite no máximo ${tenant.plan.maxInterests} interesse(s). Faça upgrade para adicionar mais.`,
+        });
+      }
+
+      if (tenant.plan.maxPortals !== -1 && portalIds.length > tenant.plan.maxPortals) {
+        return reply.code(403).send({
+          error: `Seu plano permite no máximo ${tenant.plan.maxPortals} portal(is) por interesse.`,
+        });
+      }
     }
 
     const [interest] = await db.insert(schema.interests).values({

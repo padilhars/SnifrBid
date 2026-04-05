@@ -10,6 +10,7 @@ interface AuthState {
   setAuth: (user: User, tenant: Tenant, accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
   updateToken: (accessToken: string, refreshToken?: string) => void;
+  updateTenant: (tenant: Tenant) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -32,6 +33,8 @@ export const useAuthStore = create<AuthState>()(
 
       updateToken: (accessToken, refreshToken) =>
         set((s) => ({ accessToken, refreshToken: refreshToken ?? s.refreshToken })),
+
+      updateTenant: (tenant) => set({ tenant }),
     }),
     { name: 'snifrbid_auth' },
   ),

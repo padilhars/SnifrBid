@@ -26,7 +26,7 @@ interface TenantPortal {
 
 export default function PortaisPage() {
   const qc = useQueryClient();
-  const { tenant } = useAuthStore();
+  const { tenant, user } = useAuthStore();
 
   const { data: allPortals, isLoading: loadingAll } = useQuery<Portal[]>({
     queryKey: ['available-portals'],
@@ -54,7 +54,8 @@ export default function PortaisPage() {
 
   const isLoading = loadingAll || loadingActivated;
   const activatedIds = new Set((activated ?? []).map((tp) => tp.portalId));
-  const maxPortals = tenant?.plan?.maxPortals ?? 1;
+  const isAdmin = user?.role === 'system_admin';
+  const maxPortals = isAdmin ? -1 : (tenant?.plan?.maxPortals ?? 1);
   const activatedCount = activatedIds.size;
   const atLimit = maxPortals !== -1 && activatedCount >= maxPortals;
 
