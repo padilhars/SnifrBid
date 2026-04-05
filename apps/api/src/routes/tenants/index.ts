@@ -1,46 +1,71 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, inArray } from 'drizzle-orm';
 import { getDb, schema } from '@snifrbid/db';
 import { logAudit } from '../../services/audit.js';
 
 export default async function tenantRoutes(app: FastifyInstance) {
 
-  // GET /tenants/portals — lista portais ativos globais (para interesse form)
+  // GET /tenants/portals — portais ativos para este tenant (usados no form de interesse)
   app.get('/portals', { onRequest: [app.authenticate] }, async (req) => {
     const db = getDb();
-    // System admin vê todos; tenant vê os que ativou (ou todos se não tiver nenhum ativado)
+    // System admin vê todos os portais ativos globalmente
     if (req.currentUser.role === 'system_admin') {
       return db.query.portals.findMany({
         where: eq(schema.portals.isActive, true),
         orderBy: (p, { asc }) => [asc(p.name)],
       });
     }
+    // Tenant: apenas os portais que ativou
     const activated = await db.query.tenantPortals.findMany({
       where: eq(schema.tenantPortals.tenantId, req.currentUser.tenantId),
       with: { portal: true },
     });
-    if (activated.length > 0) {
-      return activated.map((tp) => tp.portal).filter((p) => p.isActive);
-    }
-    // Fallback: mostra todos os portais ativos se tenant não ativou nenhum
-    return db.query.portals.findMany({
-      where: eq(schema.portals.isActive, true),
-      orderBy: (p, { asc }) => [asc(p.name)],
-    });
+    return activated.map((tp) => tp.portal).filter((p) => p.isActive);
   });
 
-  // GET /tenants/modalidades — lista modalidades (para qualquer usuário autenticado)
-  app.get('/modalidades', { onRequest: [app.authenticate] }, async () => {
-    return getDb().query.modalidades.findMany({
+  // GET /tenants/modalidades — modalidades apenas dos portais ativados pelo tenant
+  app.get('/modalidades', { onRequest: [app.authenticate] }, async (req) => {
+    const db = getDb();
+    // System admin vê todas
+    if (req.currentUser.role === 'system_admin') {
+      return db.query.modalidades.findMany({
+        where: eq(schema.modalidades.isActive, true),
+        orderBy: (m, { asc }) => [asc(m.name)],
+      });
+    }
+    // Busca os portalIds ativados pelo tenant
+    const tenantPortals = await db.select({ portalId: schema.tenantPortals.portalId })
+      .from(schema.tenantPortals)
+      .where(eq(schema.tenantPortals.tenantId, req.currentUser.tenantId));
+
+    if (tenantPortals.length === 0) return [];
+
+    const portalIds = tenantPortals.map((tp) => tp.portalId);
+    return db.query.modalidades.findMany({
+      where: and(
+        eq(schema.modalidades.isActive, true),
+        inArray(schema.modalidades.portalId, portalIds),
+      ),
       orderBy: (m, { asc }) => [asc(m.name)],
     });
   });
 
-  // GET /tenants/ufs — lista UFs (para qualquer usuário autenticado)
-  app.get('/ufs', { onRequest: [app.authenticate] }, async () => {
-    return getDb().query.ufs.findMany({
-      orderBy: (u, { asc }) => [asc(u.code)],
+  // GET /tenants/ufs — UFs ativadas pelo tenant (ou todas se nenhuma ativada)
+  app.get('/ufs', { onRequest: [app.authenticate] }, async (req) => {
+    const db = getDb();
+    // System admin vê todas
+    if (req.currentUser.role === 'system_admin') {
+      return db.query.ufs.findMany({ orderBy: (u, { asc }) => [asc(u.code)] });
+    }
+    const activated = await db.query.tenantUfs.findMany({
+      where: eq(schema.tenantUfs.tenantId, req.currentUser.tenantId),
+      with: { uf: true },
     });
+    // Se o tenant não ativou nenhuma UF, retorna todas (sem restrição)
+    if (activated.length === 0) {
+      return db.query.ufs.findMany({ orderBy: (u, { asc }) => [asc(u.code)] });
+    }
+    return activated.map((tu) => tu.uf).sort((a, b) => a.code.localeCompare(b.code));
   });
 
   // GET /tenants/plans — lista planos disponíveis (para tenant admin visualizar)
