@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  /* Backgrounds */
+  --color-background: hsl(0 0% 98%);
+  --color-background-secondary: hsl(0 0% 100%);
+  --color-background-tertiary: hsl(220 14% 96%);
+
+  /* Texto */
+  --color-foreground: hsl(222 47% 11%);
+  --color-foreground-muted: hsl(215 16% 47%);
+  --color-foreground-hint: hsl(215 14% 65%);
+
+  /* Accent principal (índigo) */
+  --color-primary: hsl(239 84% 67%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Bordas */
+  --color-border: hsl(220 13% 88%);
+  --color-border-strong: hsl(220 13% 78%);
+
+  /* Semânticas */
+  --color-success: hsl(160 84% 39%);
+  --color-warning: hsl(38 92% 50%);
+  --color-danger: hsl(0 84% 60%);
+  --color-info: hsl(217 91% 60%);
+
+  /* Raios */
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+:root {
+  --background: 0 0% 98%;
+  --background-secondary: 0 0% 100%;
+  --background-tertiary: 220 14% 96%;
+  --foreground: 222 47% 11%;
+  --foreground-muted: 215 16% 47%;
+  --foreground-hint: 215 14% 65%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --border: 220 13% 88%;
+  --border-strong: 220 13% 78%;
+  --success: 160 84% 39%;
+  --warning: 38 92% 50%;
+  --danger: 0 84% 60%;
+  --info: 217 91% 60%;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* shadcn/ui compat */
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 220 13% 88%;
+  --ring: 239 84% 67%;
+}
+
+.dark {
+  --background: 222 47% 7%;
+  --background-secondary: 222 47% 10%;
+  --background-tertiary: 222 35% 13%;
+  --foreground: 210 40% 90%;
+  --foreground-muted: 215 20% 55%;
+  --foreground-hint: 215 15% 40%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --border: 217 32% 17%;
+  --border-strong: 217 32% 25%;
+  --success: 160 84% 39%;
+  --warning: 38 92% 50%;
+  --danger: 0 84% 60%;
+  --info: 217 91% 60%;
+
+  /* shadcn/ui compat */
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 90%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 90%;
+  --secondary: 222 35% 13%;
+  --secondary-foreground: 210 40% 90%;
+  --muted: 222 35% 13%;
+  --muted-foreground: 215 20% 55%;
+  --accent: 222 35% 13%;
+  --accent-foreground: 210 40% 90%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 217 32% 17%;
+  --ring: 239 84% 67%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
